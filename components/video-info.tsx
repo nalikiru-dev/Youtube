@@ -4,10 +4,11 @@ import { useState } from "react"
 import { formatDistanceToNow } from "date-fns"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { ThumbsUp, ThumbsDown, Share, Save, MoreHorizontal, Bell } from "lucide-react"
+import { ThumbsUp, ThumbsDown, Share, Clock, MoreHorizontal, Bell } from "lucide-react"
 import Link from "next/link"
 import { useSupabase } from "@/components/supabase-provider"
-import { toggleLike, toggleSubscription } from "@/lib/actions"
+import { toggleLike, toggleSubscription, toggleWatchLater } from "@/lib/actions"
+import { useToast } from "@/hooks/use-toast"
 
 interface Video {
   id: string
@@ -28,11 +29,13 @@ interface Video {
 
 export function VideoInfo({ video }: { video: Video }) {
   const { session } = useSupabase()
+  const { toast } = useToast()
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
   const [likesCount, setLikesCount] = useState(video.likes_count)
   const [hasLiked, setHasLiked] = useState(video.user_has_liked || false)
   const [isSubscribed, setIsSubscribed] = useState(video.user_has_subscribed || false)
   const [subscribersCount, setSubscribersCount] = useState(video.user.subscribers_count)
+  const [isInWatchLater, setIsInWatchLater] = useState(false)
 
   const handleLike = async () => {
     if (!session) {
@@ -44,10 +47,28 @@ export function VideoInfo({ video }: { video: Video }) {
     setHasLiked(newLikeState)
     setLikesCount((prev) => (newLikeState ? prev + 1 : prev - 1))
 
-    await toggleLike({
-      videoId: video.id,
-      liked: newLikeState,
-    })
+    try {
+      await toggleLike({
+        videoId: video.id,
+        liked: newLikeState,
+      })
+
+      toast({
+        title: newLikeState ? "Video liked" : "Like removed",
+        description: newLikeState
+          ? "This video has been added to your liked videos"
+          : "This video has been removed from your liked videos",
+      })
+    } catch (error) {
+      // Revert state on error
+      setHasLiked(!newLikeState)
+      setLikesCount((prev) => (!newLikeState ? prev + 1 : prev - 1))
+      toast({
+        title: "Error",
+        description: "Failed to update like status",
+        variant: "destructive",
+      })
+    }
   }
 
   const handleSubscribe = async () => {
@@ -60,10 +81,60 @@ export function VideoInfo({ video }: { video: Video }) {
     setIsSubscribed(newSubscriptionState)
     setSubscribersCount((prev) => (newSubscriptionState ? prev + 1 : prev - 1))
 
-    await toggleSubscription({
-      channelId: video.user.id,
-      subscribed: newSubscriptionState,
-    })
+    try {
+      await toggleSubscription({
+        channelId: video.user.id,
+        subscribed: newSubscriptionState,
+      })
+
+      toast({
+        title: newSubscriptionState ? "Subscribed" : "Unsubscribed",
+        description: newSubscriptionState
+          ? `You are now subscribed to ${video.user.username}`
+          : `You have unsubscribed from ${video.user.username}`,
+      })
+    } catch (error) {
+      // Revert state on error
+      setIsSubscribed(!newSubscriptionState)
+      setSubscribersCount((prev) => (!newSubscriptionState ? prev + 1 : prev - 1))
+      toast({
+        title: "Error",
+        description: "Failed to update subscription status",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleWatchLater = async () => {
+    if (!session) {
+      window.location.href = "/login"
+      return
+    }
+
+    const newWatchLaterState = !isInWatchLater
+    setIsInWatchLater(newWatchLaterState)
+
+    try {
+      await toggleWatchLater({
+        videoId: video.id,
+        add: newWatchLaterState,
+      })
+
+      toast({
+        title: newWatchLaterState ? "Added to Watch Later" : "Removed from Watch Later",
+        description: newWatchLaterState
+          ? "This video has been added to your Watch Later playlist"
+          : "This video has been removed from your Watch Later playlist",
+      })
+    } catch (error) {
+      // Revert state on error
+      setIsInWatchLater(!newWatchLaterState)
+      toast({
+        title: "Error",
+        description: "Failed to update Watch Later status",
+        variant: "destructive",
+      })
+    }
   }
 
   return (
@@ -114,14 +185,14 @@ export function VideoInfo({ video }: { video: Video }) {
             </Button>
           </div>
 
-          <Button variant="ghost" size="sm">
-            <Share className="h-4 w-4 mr-2" />
-            Share
+          <Button variant="ghost" size="sm" onClick={handleWatchLater}>
+            <Clock className={`h-4 w-4 mr-2 ${isInWatchLater ? "fill-current" : ""}`} />
+            {isInWatchLater ? "Added" : "Watch Later"}
           </Button>
 
           <Button variant="ghost" size="sm">
-            <Save className="h-4 w-4 mr-2" />
-            Save
+            <Share className="h-4 w-4 mr-2" />
+            Share
           </Button>
 
           <Button variant="ghost" size="icon">

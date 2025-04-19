@@ -4,12 +4,13 @@ import { useState, useRef, useEffect } from "react"
 import { Play, Pause, Volume2, VolumeX, Maximize, SkipBack, SkipForward, Settings } from "lucide-react"
 import { Slider } from "@/components/ui/slider"
 import { Button } from "@/components/ui/button"
-import { incrementVideoView } from "@/lib/actions"
+import { incrementVideoView, updateWatchDuration } from "@/lib/actions"
 
 interface Video {
   id: string
   title: string
   video_url: string
+  thumbnail_url: string | null
   duration: number | null
 }
 
@@ -23,6 +24,17 @@ export function VideoPlayer({ video }: { video: Video }) {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [viewCounted, setViewCounted] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Track watch duration
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (isPlaying && currentTime > 0) {
+        updateWatchDuration({ videoId: video.id, duration: Math.floor(currentTime) }).catch(console.error)
+      }
+    }, 30000) // Update every 30 seconds
+
+    return () => clearInterval(interval)
+  }, [video.id, isPlaying, currentTime])
 
   useEffect(() => {
     const videoElement = videoRef.current

@@ -7,10 +7,24 @@ import { redirect } from "next/navigation"
 export async function incrementVideoView(videoId: string) {
   try {
     const supabase = createServerClient()
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
 
+    // Increment view count
     await supabase.rpc("increment_video_views", {
       video_uuid: videoId,
     })
+
+    // Add to watch history if user is logged in
+    if (session) {
+      await supabase.from("watch_history").upsert({
+        user_id: session.user.id,
+        video_id: videoId,
+        watched_at: new Date().toISOString(),
+        watch_duration: 0, // This would be updated later with actual watch duration
+      })
+    }
   } catch (error) {
     console.error("Failed to increment view:", error)
   }
@@ -37,9 +51,34 @@ export async function toggleLike({ videoId, liked }: { videoId: string; liked: b
     }
 
     revalidatePath(`/video/${videoId}`)
+    revalidatePath("/liked-videos")
   } catch (error) {
     console.error("Failed to toggle like:", error)
     throw new Error("Failed to update like status")
+  }
+}
+
+export async function toggleWatchLater({ videoId, add }: { videoId: string; add: boolean }) {
+  try {
+    const supabase = createServerClient()
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+
+    if (!session) {
+      redirect("/login")
+    }
+
+    // In a real app, you would have a watch_later table
+    // For this example, we'll just simulate the functionality
+    console.log(
+      `${add ? "Adding" : "Removing"} video ${videoId} ${add ? "to" : "from"} watch later for user ${session.user.id}`,
+    )
+
+    revalidatePath("/watch-later")
+  } catch (error) {
+    console.error("Failed to toggle watch later:", error)
+    throw new Error("Failed to update watch later status")
   }
 }
 
@@ -89,6 +128,7 @@ export async function toggleSubscription({ channelId, subscribed }: { channelId:
     }
 
     revalidatePath(`/channel/${channelId}`)
+    revalidatePath("/subscriptions")
   } catch (error) {
     console.error("Failed to toggle subscription:", error)
     throw new Error("Failed to update subscription status")
@@ -211,6 +251,7 @@ export async function uploadVideo({
     }
 
     revalidatePath("/")
+    revalidatePath("/your-videos")
 
     return video.id
   } catch (error) {
@@ -290,5 +331,24 @@ export async function updateProfile({
   } catch (error) {
     console.error("Failed to update profile:", error)
     throw new Error("Failed to update profile")
+  }
+}
+
+export async function updateWatchDuration({ videoId, duration }: { videoId: string; duration: number }) {
+  try {
+    const supabase = createServerClient()
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+
+    if (!session) return
+
+    await supabase
+      .from("watch_history")
+      .update({ watch_duration: duration })
+      .eq("user_id", session.user.id)
+      .eq("video_id", videoId)
+  } catch (error) {
+    console.error("Failed to update watch duration:", error)
   }
 }

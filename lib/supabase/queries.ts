@@ -359,3 +359,289 @@ export const getUserProfile = cache(async (userId: string) => {
     return null
   }
 })
+
+export const getUserVideos = cache(async (userId: string) => {
+  try {
+    const supabase = createServerClient()
+
+    const { data: videos, error } = await supabase
+      .from("videos")
+      .select(`
+        id,
+        title,
+        thumbnail_url,
+        views,
+        created_at,
+        duration,
+        user:profiles(id, username, avatar_url)
+      `)
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+
+    if (error) {
+      console.error("Error fetching user videos:", error)
+      return []
+    }
+
+    return videos || []
+  } catch (error) {
+    console.error("Failed to fetch user videos:", error)
+    return []
+  }
+})
+
+export const getLikedVideos = cache(async (userId: string, limit?: number) => {
+  try {
+    const supabase = createServerClient()
+
+    let query = supabase
+      .from("likes")
+      .select(`
+        video:videos(
+          id,
+          title,
+          thumbnail_url,
+          views,
+          created_at,
+          duration,
+          user:profiles(id, username, avatar_url)
+        )
+      `)
+      .eq("user_id", userId)
+      .not("video_id", "is", null)
+      .order("created_at", { ascending: false })
+
+    if (limit) {
+      query = query.limit(limit)
+    }
+
+    const { data, error } = await query
+
+    if (error) {
+      console.error("Error fetching liked videos:", error)
+      return []
+    }
+
+    // Transform the data to match the expected format
+    const videos = data.map((item) => item.video).filter(Boolean) // Remove any null values
+
+    return videos
+  } catch (error) {
+    console.error("Failed to fetch liked videos:", error)
+    return []
+  }
+})
+
+export const getWatchLaterVideos = cache(async (userId: string, limit?: number) => {
+  try {
+    const supabase = createServerClient()
+
+    // For this example, we'll simulate a watch later feature
+    // In a real app, you would have a watch_later table
+    // For now, we'll just return some videos as a placeholder
+    const { data: videos, error } = await supabase
+      .from("videos")
+      .select(`
+        id,
+        title,
+        thumbnail_url,
+        views,
+        created_at,
+        duration,
+        user:profiles(id, username, avatar_url)
+      `)
+      .order("views", { ascending: false })
+      .limit(limit || 10)
+
+    if (error) {
+      console.error("Error fetching watch later videos:", error)
+      return []
+    }
+
+    return videos || []
+  } catch (error) {
+    console.error("Failed to fetch watch later videos:", error)
+    return []
+  }
+})
+
+export const getWatchHistory = cache(async (userId: string, limit?: number) => {
+  try {
+    const supabase = createServerClient()
+
+    let query = supabase
+      .from("watch_history")
+      .select(`
+        video:videos(
+          id,
+          title,
+          thumbnail_url,
+          views,
+          created_at,
+          duration,
+          user:profiles(id, username, avatar_url)
+        )
+      `)
+      .eq("user_id", userId)
+      .order("watched_at", { ascending: false })
+
+    if (limit) {
+      query = query.limit(limit)
+    }
+
+    const { data, error } = await query
+
+    if (error) {
+      console.error("Error fetching watch history:", error)
+      return []
+    }
+
+    // Transform the data to match the expected format
+    const videos = data.map((item) => item.video).filter(Boolean) // Remove any null values
+
+    return videos
+  } catch (error) {
+    console.error("Failed to fetch watch history:", error)
+    return []
+  }
+})
+
+export const getSubscriptionVideos = cache(async (userId: string) => {
+  try {
+    const supabase = createServerClient()
+
+    // Get the channels the user is subscribed to
+    const { data: subscriptions, error: subError } = await supabase
+      .from("subscriptions")
+      .select("channel_id")
+      .eq("subscriber_id", userId)
+
+    if (subError || !subscriptions.length) {
+      return []
+    }
+
+    const channelIds = subscriptions.map((sub) => sub.channel_id)
+
+    // Get videos from those channels
+    const { data: videos, error } = await supabase
+      .from("videos")
+      .select(`
+        id,
+        title,
+        thumbnail_url,
+        views,
+        created_at,
+        duration,
+        user:profiles(id, username, avatar_url)
+      `)
+      .in("user_id", channelIds)
+      .order("created_at", { ascending: false })
+      .limit(20)
+
+    if (error) {
+      console.error("Error fetching subscription videos:", error)
+      return []
+    }
+
+    return videos || []
+  } catch (error) {
+    console.error("Failed to fetch subscription videos:", error)
+    return []
+  }
+})
+
+export const getRecentVideos = cache(async (userId: string, limit = 10) => {
+  try {
+    const supabase = createServerClient()
+
+    const { data: history, error: historyError } = await supabase
+      .from("watch_history")
+      .select(`
+        video:videos(
+          id,
+          title,
+          thumbnail_url,
+          views,
+          created_at,
+          duration,
+          user:profiles(id, username, avatar_url)
+        )
+      `)
+      .eq("user_id", userId)
+      .order("watched_at", { ascending: false })
+      .limit(limit)
+
+    if (historyError) {
+      console.error("Error fetching recent videos:", historyError)
+      return []
+    }
+
+    // Transform the data to match the expected format
+    const videos = history.map((item) => item.video).filter(Boolean) // Remove any null values
+
+    return videos
+  } catch (error) {
+    console.error("Failed to fetch recent videos:", error)
+    return []
+  }
+})
+
+export const getTrendingVideos = cache(async (limit = 10) => {
+  try {
+    const supabase = createServerClient()
+
+    const { data: videos, error } = await supabase
+      .from("videos")
+      .select(`
+        id,
+        title,
+        thumbnail_url,
+        views,
+        created_at,
+        duration,
+        user:profiles(id, username, avatar_url)
+      `)
+      .order("views", { ascending: false })
+      .limit(limit)
+
+    if (error) {
+      console.error("Error fetching trending videos:", error)
+      return []
+    }
+
+    return videos || []
+  } catch (error) {
+    console.error("Failed to fetch trending videos:", error)
+    return []
+  }
+})
+
+export const getNewVideos = cache(async (limit = 10) => {
+  try {
+    const supabase = createServerClient()
+
+    const { data: videos, error } = await supabase
+      .from("videos")
+      .select(`
+        id,
+        title,
+        thumbnail_url,
+        views,
+        created_at,
+        duration,
+        user:profiles(id, username, avatar_url)
+      `)
+      .order("created_at", { ascending: false })
+      .limit(limit)
+
+    if (error) {
+      console.error("Error fetching new videos:", error)
+      return []
+    }
+
+    return videos || []
+  } catch (error) {
+    console.error("Failed to fetch new videos:", error)
+    return []
+  }
+})

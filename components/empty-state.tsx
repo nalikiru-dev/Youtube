@@ -1,13 +1,15 @@
 import type { LucideIcon } from "lucide-react"
 import { Video, Search, User, FileVideo } from "lucide-react"
+import type { ReactNode } from "react"
 
 interface EmptyStateProps {
   title: string
   description: string
   icon?: "video" | "search" | "user" | "file"
+  children?: ReactNode
 }
 
-export function EmptyState({ title, description, icon = "video" }: EmptyStateProps) {
+export function EmptyState({ title, description, icon = "video", children }: EmptyStateProps) {
   const icons: Record<string, LucideIcon> = {
     video: Video,
     search: Search,
@@ -24,6 +26,7 @@ export function EmptyState({ title, description, icon = "video" }: EmptyStatePro
       </div>
       <h3 className="text-xl font-medium mb-2">{title}</h3>
       <p className="text-muted-foreground max-w-sm">{description}</p>
+      {children}
     </div>
   )
 }
