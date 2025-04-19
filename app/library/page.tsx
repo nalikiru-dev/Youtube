@@ -13,7 +13,7 @@ export default async function LibraryPage() {
   } = await supabase.auth.getSession()
 
   if (!session) {
-    redirect("/login")
+    redirect(`/login?redirectTo=${encodeURIComponent("/library")}`)
   }
 
   const [recentVideos, likedVideos, watchLaterVideos] = await Promise.all([

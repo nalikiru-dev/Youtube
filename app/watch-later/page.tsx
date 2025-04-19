@@ -11,7 +11,7 @@ export default async function WatchLaterPage() {
   } = await supabase.auth.getSession()
 
   if (!session) {
-    redirect("/login")
+    redirect(`/login?redirectTo=${encodeURIComponent("/watch-later")}`)
   }
 
   const videos = await getWatchLaterVideos(session.user.id)

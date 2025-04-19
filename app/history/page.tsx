@@ -11,7 +11,7 @@ export default async function HistoryPage() {
   } = await supabase.auth.getSession()
 
   if (!session) {
-    redirect("/login")
+    redirect(`/login?redirectTo=${encodeURIComponent("/history")}`)
   }
 
   const videos = await getWatchHistory(session.user.id)

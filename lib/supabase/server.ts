@@ -17,16 +17,19 @@ export function createServerClient() {
           try {
             cookieStore.set({ name, value, ...options })
           } catch (error) {
-            // Handle cookies in read-only context
+            // Handle cookies in read-only context during SSR
           }
         },
         remove(name: string, options: any) {
           try {
             cookieStore.set({ name, value: "", ...options })
           } catch (error) {
-            // Handle cookies in read-only context
+            // Handle cookies in read-only context during SSR
           }
         },
+      },
+      auth: {
+        persistSession: true,
       },
     },
   )

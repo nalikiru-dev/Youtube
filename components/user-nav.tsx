@@ -13,32 +13,50 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useSupabase } from "@/components/supabase-provider"
 import { User, Settings, LogOut, Upload, VideoIcon } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 
 export function UserNav() {
   const router = useRouter()
-  const { supabase, session } = useSupabase()
+  const { supabase, session, isLoading } = useSupabase()
+  const { toast } = useToast()
 
+  if (isLoading) return null
   if (!session) return null
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    router.refresh()
+    try {
+      await supabase.auth.signOut()
+      toast({
+        title: "Signed out",
+        description: "You have been signed out successfully",
+      })
+      router.refresh()
+      router.push("/")
+    } catch (error) {
+      console.error("Error signing out:", error)
+      toast({
+        title: "Error",
+        description: "Failed to sign out",
+        variant: "destructive",
+      })
+    }
   }
+
+  const username = session.user.user_metadata.username || session.user.email?.split("@")[0] || "User"
+  const avatarUrl = session.user.user_metadata.avatar_url || ""
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Avatar className="h-8 w-8 cursor-pointer">
-          <AvatarImage src={session.user.user_metadata.avatar_url || ""} />
-          <AvatarFallback>{session.user.email?.slice(0, 2).toUpperCase()}</AvatarFallback>
+          <AvatarImage src={avatarUrl || "/placeholder.svg"} />
+          <AvatarFallback>{username.slice(0, 2).toUpperCase()}</AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel>
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium">
-              {session.user.user_metadata.username || session.user.email?.split("@")[0]}
-            </p>
+            <p className="text-sm font-medium">{username}</p>
             <p className="text-xs text-muted-foreground">{session.user.email}</p>
           </div>
         </DropdownMenuLabel>

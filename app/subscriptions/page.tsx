@@ -11,7 +11,7 @@ export default async function SubscriptionsPage() {
   } = await supabase.auth.getSession()
 
   if (!session) {
-    redirect("/login")
+    redirect(`/login?redirectTo=${encodeURIComponent("/subscriptions")}`)
   }
 
   const videos = await getSubscriptionVideos(session.user.id)

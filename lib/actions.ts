@@ -2,7 +2,20 @@
 
 import { revalidatePath } from "next/cache"
 import { createServerClient } from "@/lib/supabase/server"
-import { redirect } from "next/navigation"
+
+// Helper function to check authentication
+async function checkAuth() {
+  const supabase = createServerClient()
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+
+  if (!session) {
+    throw new Error("Authentication required")
+  }
+
+  return { supabase, session }
+}
 
 export async function incrementVideoView(videoId: string) {
   try {
@@ -32,14 +45,7 @@ export async function incrementVideoView(videoId: string) {
 
 export async function toggleLike({ videoId, liked }: { videoId: string; liked: boolean }) {
   try {
-    const supabase = createServerClient()
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
-    if (!session) {
-      redirect("/login")
-    }
+    const { supabase, session } = await checkAuth()
 
     if (liked) {
       await supabase.from("likes").insert({
@@ -52,22 +58,16 @@ export async function toggleLike({ videoId, liked }: { videoId: string; liked: b
 
     revalidatePath(`/video/${videoId}`)
     revalidatePath("/liked-videos")
+    return { success: true }
   } catch (error) {
     console.error("Failed to toggle like:", error)
-    throw new Error("Failed to update like status")
+    return { success: false, error: "Failed to update like status" }
   }
 }
 
 export async function toggleWatchLater({ videoId, add }: { videoId: string; add: boolean }) {
   try {
-    const supabase = createServerClient()
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
-    if (!session) {
-      redirect("/login")
-    }
+    const { supabase, session } = await checkAuth()
 
     // In a real app, you would have a watch_later table
     // For this example, we'll just simulate the functionality
@@ -76,22 +76,16 @@ export async function toggleWatchLater({ videoId, add }: { videoId: string; add:
     )
 
     revalidatePath("/watch-later")
+    return { success: true }
   } catch (error) {
     console.error("Failed to toggle watch later:", error)
-    throw new Error("Failed to update watch later status")
+    return { success: false, error: "Failed to update watch later status" }
   }
 }
 
 export async function toggleCommentLike({ commentId, liked }: { commentId: string; liked: boolean }) {
   try {
-    const supabase = createServerClient()
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
-    if (!session) {
-      redirect("/login")
-    }
+    const { supabase, session } = await checkAuth()
 
     if (liked) {
       await supabase.from("likes").insert({
@@ -101,22 +95,17 @@ export async function toggleCommentLike({ commentId, liked }: { commentId: strin
     } else {
       await supabase.from("likes").delete().eq("user_id", session.user.id).eq("comment_id", commentId)
     }
+
+    return { success: true }
   } catch (error) {
     console.error("Failed to toggle comment like:", error)
-    throw new Error("Failed to update comment like status")
+    return { success: false, error: "Failed to update comment like status" }
   }
 }
 
 export async function toggleSubscription({ channelId, subscribed }: { channelId: string; subscribed: boolean }) {
   try {
-    const supabase = createServerClient()
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
-    if (!session) {
-      redirect("/login")
-    }
+    const { supabase, session } = await checkAuth()
 
     if (subscribed) {
       await supabase.from("subscriptions").insert({
@@ -129,22 +118,16 @@ export async function toggleSubscription({ channelId, subscribed }: { channelId:
 
     revalidatePath(`/channel/${channelId}`)
     revalidatePath("/subscriptions")
+    return { success: true }
   } catch (error) {
     console.error("Failed to toggle subscription:", error)
-    throw new Error("Failed to update subscription status")
+    return { success: false, error: "Failed to update subscription status" }
   }
 }
 
 export async function addComment({ videoId, content }: { videoId: string; content: string }) {
   try {
-    const supabase = createServerClient()
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
-    if (!session) {
-      redirect("/login")
-    }
+    const { supabase, session } = await checkAuth()
 
     const { data: comment } = await supabase
       .from("comments")
@@ -200,6 +183,14 @@ export async function uploadVideo({
 }) {
   try {
     const supabase = createServerClient()
+
+    // Double-check authentication
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+    if (!session || session.user.id !== userId) {
+      throw new Error("Authentication required")
+    }
 
     // Upload video file
     const videoFileName = `${userId}/${Date.now()}-${videoFile.name}`
@@ -274,14 +265,7 @@ export async function updateProfile({
   bannerFile: File | null
 }) {
   try {
-    const supabase = createServerClient()
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
-    if (!session) {
-      redirect("/login")
-    }
+    const { supabase, session } = await checkAuth()
 
     const userId = session.user.id
     const updates: any = {
@@ -328,9 +312,10 @@ export async function updateProfile({
 
     revalidatePath("/profile")
     revalidatePath(`/channel/${userId}`)
+    return { success: true }
   } catch (error) {
     console.error("Failed to update profile:", error)
-    throw new Error("Failed to update profile")
+    return { success: false, error: "Failed to update profile" }
   }
 }
 
@@ -341,14 +326,17 @@ export async function updateWatchDuration({ videoId, duration }: { videoId: stri
       data: { session },
     } = await supabase.auth.getSession()
 
-    if (!session) return
+    if (!session) return { success: false }
 
     await supabase
       .from("watch_history")
       .update({ watch_duration: duration })
       .eq("user_id", session.user.id)
       .eq("video_id", videoId)
+
+    return { success: true }
   } catch (error) {
     console.error("Failed to update watch duration:", error)
+    return { success: false }
   }
 }

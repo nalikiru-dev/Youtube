@@ -14,7 +14,7 @@ export default async function YourVideosPage() {
   } = await supabase.auth.getSession()
 
   if (!session) {
-    redirect("/login")
+    redirect(`/login?redirectTo=${encodeURIComponent("/your-videos")}`)
   }
 
   const videos = await getUserVideos(session.user.id)

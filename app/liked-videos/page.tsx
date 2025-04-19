@@ -11,7 +11,7 @@ export default async function LikedVideosPage() {
   } = await supabase.auth.getSession()
 
   if (!session) {
-    redirect("/login")
+    redirect(`/login?redirectTo=${encodeURIComponent("/liked-videos")}`)
   }
 
   const videos = await getLikedVideos(session.user.id)

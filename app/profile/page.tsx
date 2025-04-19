@@ -10,7 +10,7 @@ export default async function ProfilePage() {
   } = await supabase.auth.getSession()
 
   if (!session) {
-    redirect("/login")
+    redirect(`/login?redirectTo=${encodeURIComponent("/profile")}`)
   }
 
   const profile = await getUserProfile(session.user.id)

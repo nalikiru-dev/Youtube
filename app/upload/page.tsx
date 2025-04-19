@@ -9,7 +9,8 @@ export default async function UploadPage() {
   } = await supabase.auth.getSession()
 
   if (!session) {
-    redirect("/login")
+    // Redirect to login with return URL
+    redirect(`/login?redirectTo=${encodeURIComponent("/upload")}`)
   }
 
   return (

@@ -9,14 +9,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { UserNav } from "@/components/user-nav"
 import { useSupabase } from "@/components/supabase-provider"
-import { Youtube, Search, Upload, Menu } from "lucide-react"
+import { Youtube, Search, Upload, Menu, Loader2 } from "lucide-react"
 import { useMobile } from "@/hooks/use-mobile"
 
 export function Header() {
   const [searchQuery, setSearchQuery] = useState("")
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const router = useRouter()
-  const { session } = useSupabase()
+  const { session, isLoading } = useSupabase()
   const isMobile = useMobile()
 
   const handleSearch = (e: React.FormEvent) => {
@@ -77,7 +77,11 @@ export function Header() {
 
           {!isSearchOpen && (
             <>
-              {session ? (
+              {isLoading ? (
+                <Button variant="ghost" size="icon" disabled>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                </Button>
+              ) : session ? (
                 <>
                   <Button variant="ghost" size="icon" asChild className="hidden sm:flex">
                     <Link href="/upload">
