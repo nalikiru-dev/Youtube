@@ -30,6 +30,7 @@ export function createServerClient() {
       },
       auth: {
         persistSession: true,
+        autoRefreshToken: true,
       },
     },
   )

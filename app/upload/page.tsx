@@ -1,17 +1,8 @@
 import { UploadForm } from "@/components/upload-form"
-import { redirect } from "next/navigation"
-import { createServerClient } from "@/lib/supabase/server"
+import { requireAuth } from "@/lib/auth-helpers"
 
 export default async function UploadPage() {
-  const supabase = createServerClient()
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session) {
-    // Redirect to login with return URL
-    redirect(`/login?redirectTo=${encodeURIComponent("/upload")}`)
-  }
+  const { session } = await requireAuth("/upload")
 
   return (
     <div className="container max-w-3xl py-6">

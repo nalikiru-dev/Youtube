@@ -1,22 +1,13 @@
 import { VideoGrid } from "@/components/video-grid"
 import { EmptyState } from "@/components/empty-state"
 import { getUserVideos } from "@/lib/supabase/queries"
-import { createServerClient } from "@/lib/supabase/server"
-import { redirect } from "next/navigation"
+import { requireAuth } from "@/lib/auth-helpers"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { Upload } from "lucide-react"
 
 export default async function YourVideosPage() {
-  const supabase = createServerClient()
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session) {
-    redirect(`/login?redirectTo=${encodeURIComponent("/your-videos")}`)
-  }
-
+  const { session, supabase } = await requireAuth("/your-videos")
   const videos = await getUserVideos(session.user.id)
 
   return (

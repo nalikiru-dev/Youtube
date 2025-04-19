@@ -10,24 +10,25 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle, Loader2 } from "lucide-react"
-import { useSupabase } from "@/components/supabase-provider"
 import { useToast } from "@/hooks/use-toast"
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
+import type { Database } from "@/lib/database.types"
 
 interface AuthFormProps {
   type: "login" | "register"
+  returnUrl?: string
 }
 
-export function AuthForm({ type }: AuthFormProps) {
+export function AuthForm({ type, returnUrl = "/" }: AuthFormProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirectTo = searchParams.get("redirectTo") || "/"
-  const { supabase } = useSupabase()
   const { toast } = useToast()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [username, setUsername] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const supabase = createClientComponentClient<Database>()
 
   // Check for message in URL
   useEffect(() => {
@@ -54,7 +55,7 @@ export function AuthForm({ type }: AuthFormProps) {
             data: {
               username: username || email.split("@")[0],
             },
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
+            emailRedirectTo: `${window.location.origin}/auth/callback?returnUrl=${encodeURIComponent(returnUrl)}`,
           },
         })
 
@@ -64,7 +65,7 @@ export function AuthForm({ type }: AuthFormProps) {
           title: "Registration successful",
           description: "Check your email to confirm your account",
         })
-        router.push("/login?message=Check your email to confirm your account")
+        router.push(`/auth/signin?message=${encodeURIComponent("Check your email to confirm your account")}`)
       } else {
         const { error, data } = await supabase.auth.signInWithPassword({
           email,
@@ -73,18 +74,14 @@ export function AuthForm({ type }: AuthFormProps) {
 
         if (error) throw error
 
-        // Force a refresh to ensure the session is available
-        router.refresh()
-
         toast({
           title: "Login successful",
           description: "You have been logged in successfully",
         })
 
-        // Redirect with a slight delay to ensure session is set
-        setTimeout(() => {
-          router.push(redirectTo)
-        }, 100)
+        // Redirect to the return URL
+        router.push(returnUrl)
+        router.refresh()
       }
     } catch (error: any) {
       setError(error.message || "An error occurred")
@@ -143,14 +140,20 @@ export function AuthForm({ type }: AuthFormProps) {
         {type === "login" ? (
           <p>
             Don't have an account?{" "}
-            <Link href={`/register${redirectTo !== "/" ? `?redirectTo=${redirectTo}` : ""}`} className="underline">
+            <Link
+              href={`/auth/signup${returnUrl !== "/" ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ""}`}
+              className="underline"
+            >
               Sign up
             </Link>
           </p>
         ) : (
           <p>
             Already have an account?{" "}
-            <Link href={`/login${redirectTo !== "/" ? `?redirectTo=${redirectTo}` : ""}`} className="underline">
+            <Link
+              href={`/auth/signin${returnUrl !== "/" ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ""}`}
+              className="underline"
+            >
               Sign in
             </Link>
           </p>

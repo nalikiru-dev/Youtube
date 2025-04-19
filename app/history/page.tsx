@@ -1,19 +1,10 @@
 import { VideoGrid } from "@/components/video-grid"
 import { EmptyState } from "@/components/empty-state"
 import { getWatchHistory } from "@/lib/supabase/queries"
-import { createServerClient } from "@/lib/supabase/server"
-import { redirect } from "next/navigation"
+import { requireAuth } from "@/lib/auth-helpers"
 
 export default async function HistoryPage() {
-  const supabase = createServerClient()
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session) {
-    redirect(`/login?redirectTo=${encodeURIComponent("/history")}`)
-  }
-
+  const { session } = await requireAuth("/history")
   const videos = await getWatchHistory(session.user.id)
 
   return (
