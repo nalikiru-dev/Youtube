@@ -10,18 +10,19 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
+import { useSupabase } from "@/components/supabase-provider"
 import Link from "next/link"
 
-export function RegisterForm() {
+export function RegisterForm({ returnUrl = "/" }: { returnUrl?: string }) {
   const router = useRouter()
   const { toast } = useToast()
+  const { supabase } = useSupabase()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [username, setUsername] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const supabase = createClientComponentClient()
+  const [registrationComplete, setRegistrationComplete] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -29,30 +30,52 @@ export function RegisterForm() {
     setIsLoading(true)
 
     try {
-      const { error } = await supabase.auth.signUp({
+      // Get the current URL for proper redirects
+      const origin = window.location.origin
+      const callbackUrl = `${origin}/auth/callback?returnUrl=${encodeURIComponent(returnUrl)}`
+
+      // Sign up with email and password
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
             username: username || email.split("@")[0],
           },
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: callbackUrl,
         },
       })
 
       if (error) throw error
 
+      // Check if email confirmation is required
+      if (data?.user && data.user.identities && data.user.identities.length === 0) {
+        throw new Error("This email is already registered. Please sign in instead.")
+      }
+
+      setRegistrationComplete(true)
       toast({
         title: "Registration successful",
-        description: "Check your email to confirm your account",
+        description: "Please check your email to verify your account.",
       })
-
-      router.push("/login?message=Check your email to confirm your account")
     } catch (error: any) {
-      setError(error.message || "An error occurred")
+      setError(error.message || "An error occurred during registration")
     } finally {
       setIsLoading(false)
     }
+  }
+
+  if (registrationComplete) {
+    return (
+      <div className="space-y-4">
+        <Alert>
+          <AlertDescription>Registration successful! Please check your email to verify your account.</AlertDescription>
+        </Alert>
+        <Button asChild className="w-full">
+          <Link href="/login">Go to Login</Link>
+        </Button>
+      </div>
+    )
   }
 
   return (
@@ -100,7 +123,10 @@ export function RegisterForm() {
       <div className="text-center text-sm">
         <p>
           Already have an account?{" "}
-          <Link href="/login" className="underline">
+          <Link
+            href={`/login${returnUrl !== "/" ? `?returnUrl=${encodeURIComponent(returnUrl)}` : ""}`}
+            className="underline"
+          >
             Sign in
           </Link>
         </p>

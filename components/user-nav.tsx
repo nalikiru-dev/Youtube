@@ -14,13 +14,28 @@ import {
 import { useSupabase } from "@/components/supabase-provider"
 import { User, Settings, LogOut, Upload, VideoIcon } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { Button } from "@/components/ui/button"
 
 export function UserNav() {
   const router = useRouter()
   const { supabase, session, isLoading } = useSupabase()
   const { toast } = useToast()
 
-  if (isLoading || !session) return null
+  if (isLoading) {
+    return (
+      <Button variant="ghost" size="sm" disabled>
+        Loading...
+      </Button>
+    )
+  }
+
+  if (!session) {
+    return (
+      <Button asChild>
+        <Link href="/login">Sign in</Link>
+      </Button>
+    )
+  }
 
   const handleSignOut = async () => {
     try {
@@ -30,6 +45,8 @@ export function UserNav() {
         description: "You have been signed out successfully",
       })
       router.refresh()
+      // Force a hard refresh to clear any cached state
+      window.location.href = "/"
     } catch (error) {
       console.error("Error signing out:", error)
       toast({

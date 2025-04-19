@@ -7,7 +7,7 @@ export function createServerClient() {
 
   return createServerClientSupabase<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         get(name: string) {
@@ -18,6 +18,7 @@ export function createServerClient() {
             cookieStore.set({ name, value, ...options })
           } catch (error) {
             // Handle cookies in read-only context during SSR
+            console.error(`Error setting cookie ${name}:`, error)
           }
         },
         remove(name: string, options: any) {
@@ -25,9 +26,33 @@ export function createServerClient() {
             cookieStore.set({ name, value: "", ...options })
           } catch (error) {
             // Handle cookies in read-only context during SSR
+            console.error(`Error removing cookie ${name}:`, error)
           }
         },
       },
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+      },
     },
   )
+}
+
+// Helper function to get the session with error handling
+export async function getSessionWithErrorHandling() {
+  const supabase = createServerClient()
+
+  try {
+    const { data, error } = await supabase.auth.getSession()
+
+    if (error) {
+      console.error("Error getting session:", error)
+      return { session: null, supabase }
+    }
+
+    return { session: data.session, supabase }
+  } catch (error) {
+    console.error("Exception getting session:", error)
+    return { session: null, supabase }
+  }
 }
