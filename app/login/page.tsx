@@ -1,10 +1,31 @@
+import { SignInForm } from "@/components/sign-in-form"
+import { createServerClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 
-export default function LoginPage({
+export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: { redirectTo?: string }
+  searchParams: { message?: string; returnUrl?: string }
 }) {
-  const redirectTo = searchParams.redirectTo || "/"
-  redirect(`/auth/signin?returnUrl=${encodeURIComponent(redirectTo)}`)
+  const supabase = createServerClient()
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
+  const returnUrl = searchParams.returnUrl || "/"
+
+  if (session) {
+    redirect(returnUrl)
+  }
+
+  return (
+    <div className="container flex items-center justify-center min-h-screen">
+      <div className="w-full max-w-md">
+        <h1 className="text-2xl font-bold text-center mb-6">Sign In</h1>
+        {searchParams.message && (
+          <div className="mb-4 p-3 bg-blue-50 text-blue-700 rounded-md text-sm">{searchParams.message}</div>
+        )}
+        <SignInForm returnUrl={returnUrl} />
+      </div>
+    </div>
+  )
 }

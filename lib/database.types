@@ -74,7 +74,7 @@ export interface Database {
           id?: string
           playlist_id?: string
           video_id?: string
-          position?: number
+          position?: string
           added_at?: string
         }
       }
