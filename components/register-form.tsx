@@ -12,6 +12,7 @@ import { AlertCircle, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useSupabase } from "@/components/supabase-provider"
 import Link from "next/link"
+import { getBaseUrl } from "@/lib/env-config"
 
 export function RegisterForm({ returnUrl = "/" }: { returnUrl?: string }) {
   const router = useRouter()
@@ -29,6 +30,12 @@ export function RegisterForm({ returnUrl = "/" }: { returnUrl?: string }) {
     setIsLoading(true)
 
     try {
+      // Get the base URL for proper redirects
+      const baseUrl = getBaseUrl()
+      const callbackUrl = `${baseUrl}/auth/callback?returnUrl=${encodeURIComponent(returnUrl)}`
+
+      console.log("Using callback URL:", callbackUrl)
+
       // Sign up with email and password
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -37,8 +44,8 @@ export function RegisterForm({ returnUrl = "/" }: { returnUrl?: string }) {
           data: {
             username: username || email.split("@")[0],
           },
-          // We're bypassing email verification by not setting emailRedirectTo
-          // This will allow immediate login without verification
+          // We're still setting emailRedirectTo for cases where email verification might be enabled
+          emailRedirectTo: callbackUrl,
         },
       })
 

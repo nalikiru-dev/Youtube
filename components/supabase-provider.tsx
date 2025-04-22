@@ -8,6 +8,7 @@ import type { SupabaseClient, Session } from "@supabase/auth-helpers-nextjs"
 import type { Database } from "@/lib/database.types"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
+import { getSupabaseUrl, getSupabaseAnonKey } from "@/lib/env-config"
 
 type SupabaseContext = {
   supabase: SupabaseClient<Database>
@@ -19,7 +20,19 @@ type SupabaseContext = {
 const Context = createContext<SupabaseContext | undefined>(undefined)
 
 export function SupabaseProvider({ children }: { children: React.ReactNode }) {
-  const [supabase] = useState(() => createClientComponentClient<Database>())
+  const [supabase] = useState(() => {
+    const supabaseUrl = getSupabaseUrl()
+    const supabaseAnonKey = getSupabaseAnonKey()
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error("Supabase URL or Anon Key is missing. Check your environment variables.")
+    }
+
+    return createClientComponentClient<Database>({
+      supabaseUrl,
+      supabaseKey: supabaseAnonKey,
+    })
+  })
   const [session, setSession] = useState<Session | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()

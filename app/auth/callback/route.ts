@@ -1,10 +1,14 @@
 import { createServerClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { getBaseUrl } from "@/lib/env-config"
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url)
+  const { searchParams } = new URL(request.url)
   const code = searchParams.get("code")
   const returnUrl = searchParams.get("returnUrl") || "/"
+
+  // Get the base URL for proper redirects
+  const baseUrl = getBaseUrl()
 
   if (code) {
     const supabase = createServerClient()
@@ -15,7 +19,7 @@ export async function GET(request: Request) {
 
       if (error) {
         console.error("Auth callback error:", error)
-        return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent("Authentication failed")}`)
+        return NextResponse.redirect(`${baseUrl}/login?error=${encodeURIComponent("Authentication failed")}`)
       }
 
       // Get the session to ensure it's properly set
@@ -25,7 +29,7 @@ export async function GET(request: Request) {
 
       if (!session) {
         console.error("No session after code exchange")
-        return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent("Authentication failed")}`)
+        return NextResponse.redirect(`${baseUrl}/login?error=${encodeURIComponent("Authentication failed")}`)
       }
 
       // Check if the user has a profile, if not create one
@@ -53,10 +57,10 @@ export async function GET(request: Request) {
       })
     } catch (error) {
       console.error("Error in auth callback:", error)
-      return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent("Authentication failed")}`)
+      return NextResponse.redirect(`${baseUrl}/login?error=${encodeURIComponent("Authentication failed")}`)
     }
   }
 
   // URL to redirect to after sign in process completes
-  return NextResponse.redirect(`${origin}${returnUrl}`)
+  return NextResponse.redirect(`${baseUrl}${returnUrl}`)
 }

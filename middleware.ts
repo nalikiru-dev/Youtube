@@ -2,20 +2,36 @@ import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import type { Database } from "@/lib/database.types"
+import { getSupabaseUrl, getSupabaseAnonKey } from "@/lib/env-config"
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next()
-  const supabase = createMiddlewareClient<Database>({ req, res })
 
-  // Store the current URL in a cookie for redirects after auth
-  res.cookies.set("next-url", req.nextUrl.pathname + req.nextUrl.search, {
-    path: "/",
-    maxAge: 60 * 60, // 1 hour
-    sameSite: "lax",
-  })
+  // Check if Supabase environment variables are set
+  const supabaseUrl = getSupabaseUrl()
+  const supabaseAnonKey = getSupabaseAnonKey()
 
-  // Refresh session if available
+  // If Supabase is not configured and we're not already on the error page or debug page,
+  // redirect to the error page
+  if (
+    (!supabaseUrl || !supabaseAnonKey) &&
+    !req.nextUrl.pathname.startsWith("/supabase-error") &&
+    !req.nextUrl.pathname.startsWith("/debug")
+  ) {
+    return NextResponse.redirect(new URL("/supabase-error", req.url))
+  }
+
   try {
+    const supabase = createMiddlewareClient<Database>({ req, res })
+
+    // Store the current URL in a cookie for redirects after auth
+    res.cookies.set("next-url", req.nextUrl.pathname + req.nextUrl.search, {
+      path: "/",
+      maxAge: 60 * 60, // 1 hour
+      sameSite: "lax",
+    })
+
+    // Refresh session if available
     const {
       data: { session },
     } = await supabase.auth.getSession()
@@ -30,6 +46,11 @@ export async function middleware(req: NextRequest) {
     }
   } catch (error) {
     console.error("Middleware error:", error)
+    // If there's an error with Supabase and we're not already on the error page,
+    // redirect to the error page
+    if (!req.nextUrl.pathname.startsWith("/supabase-error") && !req.nextUrl.pathname.startsWith("/debug")) {
+      return NextResponse.redirect(new URL("/supabase-error", req.url))
+    }
   }
 
   return res
