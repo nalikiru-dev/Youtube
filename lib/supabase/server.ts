@@ -15,7 +15,16 @@ export function createServerClient() {
         },
         set(name: string, value: string, options: any) {
           try {
-            cookieStore.set({ name, value, ...options })
+            cookieStore.set({
+              name,
+              value,
+              ...options,
+              // Ensure cookies are properly set with secure attributes
+              secure: process.env.NODE_ENV === "production",
+              sameSite: "lax",
+              path: "/",
+              maxAge: 60 * 60 * 24 * 7, // 7 days
+            })
           } catch (error) {
             // Handle cookies in read-only context during SSR
             console.error(`Error setting cookie ${name}:`, error)
@@ -23,7 +32,13 @@ export function createServerClient() {
         },
         remove(name: string, options: any) {
           try {
-            cookieStore.set({ name, value: "", ...options })
+            cookieStore.set({
+              name,
+              value: "",
+              ...options,
+              maxAge: 0,
+              path: "/",
+            })
           } catch (error) {
             // Handle cookies in read-only context during SSR
             console.error(`Error removing cookie ${name}:`, error)

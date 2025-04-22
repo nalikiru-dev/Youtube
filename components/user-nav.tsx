@@ -44,7 +44,7 @@ export function UserNav() {
         title: "Signed out",
         description: "You have been signed out successfully",
       })
-      router.refresh()
+
       // Force a hard refresh to clear any cached state
       window.location.href = "/"
     } catch (error) {

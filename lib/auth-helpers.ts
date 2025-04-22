@@ -30,23 +30,14 @@ export async function getCurrentUserId() {
   return session?.user?.id || null
 }
 
-// Function to handle email verification status
+// Function to handle email verification status - now always returns verified=true
 export async function checkEmailVerification() {
   const { session, supabase } = await getSessionWithErrorHandling()
 
   if (!session) return { verified: false, session: null }
 
-  // If email verification is required, check if the email is verified
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  // Some Supabase configurations don't require email verification
-  // If email_confirmed_at is null but we have a session, we'll consider it verified
-  // unless the app specifically requires email verification
-  const verified = !user?.email_confirmed_at ? false : true
-
-  return { verified, session }
+  // We're bypassing email verification, so always return verified=true
+  return { verified: true, session }
 }
 
 // Function to handle protected routes
@@ -62,15 +53,6 @@ export async function requireAuth(redirectTo?: string) {
     redirect(`/login?returnUrl=${encodeURIComponent(returnUrl)}`)
   }
 
-  // Check email verification if needed
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  const emailVerificationRequired = process.env.REQUIRE_EMAIL_VERIFICATION === "true"
-
-  if (emailVerificationRequired && !user?.email_confirmed_at) {
-    redirect(`/verify-email?email=${encodeURIComponent(user?.email || "")}`)
-  }
-
+  // We're bypassing email verification checks
   return { session, supabase }
 }

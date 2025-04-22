@@ -21,13 +21,11 @@ export function SignInForm({ returnUrl = "/" }: { returnUrl?: string }) {
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [showVerificationMessage, setShowVerificationMessage] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
     setIsLoading(true)
-    setShowVerificationMessage(false)
 
     try {
       // Sign in with email and password
@@ -36,14 +34,7 @@ export function SignInForm({ returnUrl = "/" }: { returnUrl?: string }) {
         password,
       })
 
-      if (signInError) {
-        // Check if the error is due to email not being verified
-        if (signInError.message.includes("Email not confirmed")) {
-          setShowVerificationMessage(true)
-          throw new Error("Please verify your email before signing in.")
-        }
-        throw signInError
-      }
+      if (signInError) throw signInError
 
       // Explicitly refresh the session to ensure it's up to date
       await refreshSession()
@@ -63,46 +54,12 @@ export function SignInForm({ returnUrl = "/" }: { returnUrl?: string }) {
     }
   }
 
-  // Function to resend verification email
-  const handleResendVerification = async () => {
-    try {
-      setIsLoading(true)
-      const { error } = await supabase.auth.resend({
-        type: "signup",
-        email,
-      })
-
-      if (error) throw error
-
-      toast({
-        title: "Verification email sent",
-        description: "Please check your email to verify your account",
-      })
-    } catch (error: any) {
-      setError(error.message || "Failed to send verification email")
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      {showVerificationMessage && (
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="flex flex-col gap-2">
-            <span>Please verify your email before signing in.</span>
-            <Button type="button" variant="outline" size="sm" onClick={handleResendVerification} disabled={isLoading}>
-              Resend verification email
-            </Button>
-          </AlertDescription>
         </Alert>
       )}
 

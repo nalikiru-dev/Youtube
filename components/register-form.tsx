@@ -16,13 +16,12 @@ import Link from "next/link"
 export function RegisterForm({ returnUrl = "/" }: { returnUrl?: string }) {
   const router = useRouter()
   const { toast } = useToast()
-  const { supabase } = useSupabase()
+  const { supabase, refreshSession } = useSupabase()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [username, setUsername] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [registrationComplete, setRegistrationComplete] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -30,10 +29,6 @@ export function RegisterForm({ returnUrl = "/" }: { returnUrl?: string }) {
     setIsLoading(true)
 
     try {
-      // Get the current URL for proper redirects
-      const origin = window.location.origin
-      const callbackUrl = `${origin}/auth/callback?returnUrl=${encodeURIComponent(returnUrl)}`
-
       // Sign up with email and password
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -42,7 +37,8 @@ export function RegisterForm({ returnUrl = "/" }: { returnUrl?: string }) {
           data: {
             username: username || email.split("@")[0],
           },
-          emailRedirectTo: callbackUrl,
+          // We're bypassing email verification by not setting emailRedirectTo
+          // This will allow immediate login without verification
         },
       })
 
@@ -53,29 +49,30 @@ export function RegisterForm({ returnUrl = "/" }: { returnUrl?: string }) {
         throw new Error("This email is already registered. Please sign in instead.")
       }
 
-      setRegistrationComplete(true)
+      // Immediately sign in the user after registration
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+
+      if (signInError) throw signInError
+
+      // Refresh the session to ensure it's up to date
+      await refreshSession()
+
       toast({
         title: "Registration successful",
-        description: "Please check your email to verify your account.",
+        description: "You have been registered and logged in successfully",
       })
+
+      // Redirect to the return URL
+      router.push(returnUrl)
+      router.refresh()
     } catch (error: any) {
       setError(error.message || "An error occurred during registration")
     } finally {
       setIsLoading(false)
     }
-  }
-
-  if (registrationComplete) {
-    return (
-      <div className="space-y-4">
-        <Alert>
-          <AlertDescription>Registration successful! Please check your email to verify your account.</AlertDescription>
-        </Alert>
-        <Button asChild className="w-full">
-          <Link href="/login">Go to Login</Link>
-        </Button>
-      </div>
-    )
   }
 
   return (

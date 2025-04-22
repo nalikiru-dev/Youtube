@@ -45,6 +45,12 @@ export async function GET(request: Request) {
           updated_at: new Date().toISOString(),
         })
       }
+
+      // Mark the user as email verified in user_metadata
+      // This is a workaround to bypass email verification
+      await supabase.auth.updateUser({
+        data: { email_verified: true },
+      })
     } catch (error) {
       console.error("Error in auth callback:", error)
       return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent("Authentication failed")}`)

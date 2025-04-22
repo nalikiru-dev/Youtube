@@ -44,14 +44,18 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
     const initializeSession = async () => {
       try {
         setIsLoading(true)
+        console.log("Initializing session...")
 
         // Get the initial session
         const {
           data: { session: initialSession },
         } = await supabase.auth.getSession()
 
+        console.log("Initial session:", initialSession ? "exists" : "does not exist")
+
         // If we have a session but it's expired, try to refresh it
         if (initialSession && new Date(initialSession.expires_at * 1000) < new Date()) {
+          console.log("Session expired, refreshing...")
           await refreshSession()
         } else {
           setSession(initialSession)
